@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "721187364574",
+    "project_id": "tiltmaze-726ca",
+    "storage_bucket": "tiltmaze-726ca.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:721187364574:android:69c7e73238bb2449f4ac4f",
+        "android_client_info": {
+          "package_name": "com.tiltmaze.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzIiYgdqQy2WXHGIXB5u93bRXauhe-KTo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

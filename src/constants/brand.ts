@@ -1,0 +1,15 @@
+export const Brand = {
+  background: '#F6F4FF',
+  surface: '#FFFFFF',
+  ink: '#30295E',
+  muted: '#777596',
+  purple: '#6846D9',
+  purpleDark: '#4D32A8',
+  pink: '#F2649A',
+  pinkDark: '#D74278',
+  teal: '#23B7C5',
+  tealDark: '#168F9A',
+  yellow: '#FFD45B',
+  yellowDark: '#D7A92C',
+  line: '#D9D0FF',
+} as const;

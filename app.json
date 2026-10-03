@@ -6,11 +6,12 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "tiltmaze",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.tiltmaze.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -31,6 +32,18 @@
           "backgroundColor": "#208AEF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "TiltMaze usa el movimiento del dispositivo para controlar la bola del laberinto."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "TiltMaze usa Face ID para desbloquear tu progreso y cosméticos."
         }
       ]
     ],

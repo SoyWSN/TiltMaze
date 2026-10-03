@@ -1,27 +1,100 @@
+# TiltMaze — contexto del proyecto (para agentes)
+
+Juego de laberinto para móvil (**Expo SDK 57 / React Native 0.86 / TypeScript**) controlado con la **inclinación del teléfono**. Prototipo de la materia *Desarrollo de Dispositivos Inteligentes*; no se publica en tiendas.
+
+## Lee esto primero
+- [`README.md`](README.md) — qué es, estado actual, estructura y cómo extenderlo.
+- [`docs/SETUP.md`](docs/SETUP.md) — checklist manual de Firebase y Stripe.
+- [`../PLAN.md`](../PLAN.md) — plan general por días (fuera de `TiltMaze/`).
+
+## Objetivo y estado
+
+**Requisitos del proyecto:** sensores del teléfono, base de datos (Firebase), compras (Stripe), notificaciones push y biometría (huella).
+
+**Implementado:**
+- Juego jugable con **5 niveles** (mapas ASCII), física propia, render con **Skia**.
+- Control por **acelerómetro** con calibración y sensibilidad (`src/game/sensors.ts` → `useTilt`).
+- **Pantalla de niveles** con desbloqueo progresivo y mejores tiempos (`src/app/levels.tsx`).
+- **Cosméticos** equipables (pelotas de color gratis + temas); premium bloqueado para Stripe (`src/data/cosmetics.ts`, `src/app/cosmetics.tsx`).
+- Sistema de diseño pastel (fondo animado, tarjetas con degradado) en **todas** las pantallas.
+- Progreso y desbloqueo **cableados** (`completeLevel` en el store, al ganar).
+
+**Pendiente:**
+- **Persistencia real** (Firestore): hoy el estado vive en memoria (`zustand`) y se pierde al cerrar.
+- **Firebase** (día 4): conectar `google-services.json`, Firestore (`users`, `purchases`), auth anónimo y **biometría** (`expo-local-authentication`) + pantallas de Configuración/Perfil reales.
+- **Stripe** (día 5): Payment Links en MXN + Cloud Function (webhook) que otorga el cosmético.
+- **Push FCM** (día 6) y pulido (día 7).
+
+## Arquitectura
+
+```
+src/
+  app/            rutas Expo Router: _layout, index, levels, game, cosmetics, sensors, settings, profile
+  components/     floating-background, gradient-card, balance-line, coming-soon, themed-*
+  constants/      palette.ts (colores del mockup), theme.ts (tema base del template)
+  data/
+    cosmetics.ts  catálogo (gratis + premium), precios MXN, helpers ballColorFor/boardThemeFor
+    levels/       types.ts (createLevel/getTile), level-1..5.ts, index.ts (registro LEVELS)
+  game/
+    sensors.ts    useTilt(): acelerómetro → inclinación calibrada
+    engine.ts     stepBall(): gravedad, fricción, colisiones, hoyos, meta
+  store/player.ts estado global (zustand): perfil, récords, desbloqueo, cosméticos equipados
+```
+
+Puntos de entrada clave:
+- `usePlayer` (zustand) es la **fuente de verdad** del estado del jugador (aún sin persistir).
+- `LEVELS` / `getLevel` / `getNextLevel` (`src/data/levels/index.ts`) — registro de niveles.
+- `Palette` (`src/constants/palette.ts`) — todos los colores de la UI.
+
+## Convenciones y decisiones
+
+- **Rutas en `src/app/`** (Expo Router). Navegación con `Link`, `router`, `useLocalSearchParams`.
+- El juego recibe el nivel por query param: `/game?level=N`. Cambiar de nivel **remonta** `GameBoard` vía `key={level.id}` (no usar efectos para resetear).
+- **Física en unidades de casilla** (independiente de píxeles). Bola radio `0.2` casillas; hoyo `0.31`.
+- **Convención de inclinación** (`useTilt`): `x` negativo = izquierda; `y` positivo = abajo en pantalla. El motor aplica la gravedad en consecuencia. No invertir sin tocar ambos.
+- **Tema claro forzado** (`app.json` → `userInterfaceStyle: "light"`).
+- **Precios en MXN.** En modo real, Stripe exige mínimo **$10 MXN**; los precios de $5–$8 funcionan en modo test.
+- Catálogo de niveles y cosméticos son **datos estáticos** en la app (no Firestore). Firestore guarda perfil/progreso/compras.
+
+## Gotchas (importante)
+
+- **Íconos:** importar siempre por subpath — `import Ionicons from '@expo/vector-icons/Ionicons'`. El barrel `import { Ionicons } from '@expo/vector-icons'` carga **todos** los sets y rompe el bundle (`Unable to resolve "./Zocial"`) además de inflar la app.
+- **Lint de React (React Compiler):** no llamar `setState` ni `Date.now()`/`Animated` impuros directamente en un efecto o en render; usa `useRef`, remount con `key`, o maneja estado por eventos. Reglas activas: `react-hooks/set-state-in-effect`, `react-hooks/purity`.
+- **`StyleSheet.absoluteFillObject` no existe** en RN 0.86 (tipos); usa `StyleSheet.absoluteFill` o `position:'absolute'` + `top/right/bottom/left: 0`.
+- **ScrollView en contenedor centrado:** darle `style={{ width: '100%' }}`; si no, se encoge al contenido y se corta a la derecha.
+- **Expo Go** sirve para Skia, sensores, degradados e íconos. **Firebase/FCM y FaceID en iOS** requieren **dev build** (`npx expo run:android` o EAS).
+- Los sensores **solo** se prueban en teléfono físico.
+
+## Cómo extender
+
+- **Nuevo nivel:** crea `src/data/levels/level-N.ts` con `createLevel({ id, name, rows })` y regístralo en `src/data/levels/index.ts`. Reglas del mapa: rectangular, borde `#`, un solo `S` y `G`, y camino S→G **sin hoyos** (validable con BFS). Ver `README.md`.
+- **Nuevo cosmético:** edita `src/data/cosmetics.ts` (`priceMXN: 0` = gratis). Ver `README.md`.
+
+## Comandos
+
+```bash
+npx expo install <pkg>   # usar SIEMPRE esto (no npm add) para versiones compatibles con el SDK
+npx expo start           # servidor de desarrollo (--clear para limpiar caché de Metro)
+npx tsc --noEmit         # typecheck
+npx expo lint            # lint
+npx expo-doctor          # diagnóstico de dependencias y config
+```
+
+**Antes de dar una tarea por terminada:** corre `npx tsc --noEmit` y `npx expo lint`.
+
+---
+
+# Convenciones de Expo (del template)
+
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
 ## Expo has changed — do not trust your training data
 
 Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
 
-1. Read the major version of the `expo` package in `package.json`.
+1. Read the major version of the `expo` package in `package.json` (currently **~57.0.26**).
 2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
 3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
-
-## Commands
-
-Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
-
-```bash
-npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
-npx expo start              # start the dev server
-npx expo lint               # lint
-npx tsc --noEmit            # typecheck
-npx expo-doctor             # diagnose dependency and config issues
-npx expo install --fix      # fix incompatible package versions
-```
-
-Run lint and typecheck before declaring any task done.
 
 ## Navigation & Routing
 

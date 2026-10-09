@@ -1,4 +1,13 @@
 {
+  "react-native": {
+    "messaging_android_notification_color": "@color/hotpink",
+    "messaging_ios_foreground_presentation_options": [
+      "badge",
+      "sound",
+      "list",
+      "banner"
+    ]
+  },
   "functions": {
     "source": "functions"
   },

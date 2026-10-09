@@ -138,7 +138,9 @@ export default function CosmeticsScreen() {
     try {
       const purchaseId = await createPurchase(uid, cosmetic.id, cosmetic.priceMXN);
       const url = buildPaymentUrl(cosmetic.paymentLinkUrl, purchaseId);
-      await WebBrowser.openBrowserAsync(url);
+      // `createTask: false` abre el navegador en la MISMA tarea que la app, así al
+      // cerrarlo (la X) se vuelve a TiltMaze en vez de salir al inicio del teléfono.
+      await WebBrowser.openBrowserAsync(url, { createTask: false });
       setNotice('Completa el pago en el navegador y el cosmético se desbloqueará solo.');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

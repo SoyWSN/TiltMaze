@@ -100,8 +100,14 @@ El webhook del día 5 corre como Cloud Function. Dos opciones:
   - [ ] **Firebase console → Plan → Upgrade to Blaze** (pay-as-you-go, pide tarjeta).
   - Ventaja: el webhook funciona siempre, incluso en la demo sin tu laptop. Con el tráfico de un examen el costo es ~$0 (las Functions tienen capa gratuita generosa).
 
-### 1.6 Push (FCM) — no requiere configuración previa
-- El día 6 pediremos permiso desde la app y probaremos enviando un mensaje desde **Firebase console → Messaging → Create your first campaign**. Solo asegúrate de tener acceso a esa sección con tu cuenta.
+### 1.6 Push (FCM)
+El día 6 ya está implementado en código (token + listeners + push al confirmar una compra).
+Solo hace falta:
+- [ ] Confirmar que la **Cloud Messaging API** está habilitada (normalmente sí; Firebase la activa al crear el proyecto). Míralo en <https://console.cloud.google.com/apis/library/fcm.googleapis.com> con el proyecto `tiltmaze-726ca`.
+- [ ] Tener acceso a **Firebase console → Engage → Messaging** (para el envío de prueba).
+- [ ] **Regenerar el dev build** (nuevo módulo nativo `@react-native-firebase/messaging`).
+
+Runbook completo y pruebas: [`PUSH.md`](./PUSH.md).
 
 ---
 
@@ -148,4 +154,4 @@ Cuando la app abre el Payment Link le añade `?client_reference_id=<id_de_la_com
 | 4 | Decidir vía de Functions (emulador vs Blaze) | 5 |
 | 5 | Crear cuenta Stripe + 5 Payment Links MXN + apuntar URLs | 5 |
 | 6 | Instalar Stripe CLI + `stripe login` | 5 |
-| 7 | (Nada más para push: se configura el día 6) | 6 |
+| 7 | Regenerar dev build con `@react-native-firebase/messaging` | 6 |

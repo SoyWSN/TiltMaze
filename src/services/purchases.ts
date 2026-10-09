@@ -26,9 +26,12 @@ export async function createPurchase(
   productId: string,
   amountMXN: number,
 ): Promise<string> {
+  const item = getCosmetic(productId);
   const ref = await addDoc(collection(getFirestore(), PURCHASES), {
     uid,
     productId,
+    // El webhook usa este nombre en el texto de la notificación push.
+    productName: item?.name ?? productId,
     amountCents: Math.round(amountMXN * 100),
     status: 'pending',
     createdAt: Date.now(),

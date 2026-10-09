@@ -19,9 +19,9 @@ Juego de laberinto para móvil (**React Native + Expo**) controlado con la **inc
 - **Sistema de diseño** acorde a un mockup: fondo pastel animado, tarjetas con degradado y sombra de color, tipografía bicolor.
 - **Firebase (día 4):** auth anónimo + Firestore, **persistencia real** del progreso (récords, desbloqueos, cosméticos), **bloqueo con huella**, **onboarding** (nombre + huella) y pantallas reales de **Configuración** y **Perfil**. Probado en dev build.
 - **Stripe (día 5):** compra de cosméticos con **Payment Links** (modo test) + **webhook** en Cloud Function que marca la compra `paid` y **desbloquea el cosmético en vivo**. Flujo probado de extremo a extremo.
+- **Notificaciones push (día 6):** token FCM guardado por jugador, permiso + interruptor en Configuración, banner in-app en primer plano, notificación del sistema en segundo plano y push **“¡Gracias por tu compra!”** disparado por el webhook al pagar.
 
 ### 🚧 Pendiente (roadmap por días)
-- **Día 6 — Notificaciones push (FCM):** permiso, token, listeners y envío de prueba desde la consola de Firebase.
 - **Día 7 — Pulido y demo.**
 - Extras opcionales: fuente redondeada (tipo *Fredoka/Baloo*), ranking, más niveles.
 
@@ -32,7 +32,7 @@ Juego de laberinto para móvil (**React Native + Expo**) controlado con la **inc
 | Base de datos (Firestore) | ✅ Implementado y probado |
 | Huella dactilar | ✅ Implementado y probado |
 | Compras (Stripe) | ✅ Implementado y probado (modo test) |
-| Notificaciones push | ⬜ Pendiente (día 6) |
+| Notificaciones push (FCM) | ✅ Implementado |
 
 ---
 
@@ -49,7 +49,7 @@ Juego de laberinto para móvil (**React Native + Expo**) controlado con la **inc
 | Biometría | `expo-local-authentication` |
 | Datos | Firebase (`@react-native-firebase`: auth anónimo + Firestore) |
 | Compras | Stripe Payment Links + Cloud Function (webhook) |
-| Push | FCM — pendiente (día 6) |
+| Push | Firebase Cloud Messaging (`@react-native-firebase/messaging`) |
 
 ---
 
@@ -64,6 +64,7 @@ npx expo start --dev-client   # requiere la dev build instalada en el teléfono
 - El proyecto usa **dev build** (EAS): **Expo Go ya no sirve** porque Firebase/FCM requieren código nativo.
 - El **acelerómetro solo funciona en un teléfono físico** (no en emuladores).
 - Para probar las **compras** (Stripe), sigue [`docs/STRIPE.md`](docs/STRIPE.md) (webhook local con el emulador + Stripe CLI).
+- Para probar las **notificaciones push** (FCM), sigue [`docs/PUSH.md`](docs/PUSH.md).
 
 Comandos útiles:
 
@@ -80,15 +81,16 @@ npx expo start --clear  # iniciar limpiando caché de Metro
 
 ```
 TiltMaze/
-├── app.json                  # config de Expo (tema claro, plugins de sensores/biometría)
+├── app.json                  # config de Expo (tema claro, plugins de sensores/biometría/push)
 ├── google-services.json      # config de Firebase
 ├── .firebaserc               # proyecto por defecto (tiltmaze-726ca)
-├── firebase.json             # config de Functions
+├── firebase.json             # config de Functions + notificaciones (clave react-native)
 ├── eas.json                  # perfiles de EAS Build
-├── functions/                # webhook de Stripe (Cloud Function v2)
+├── functions/                # webhook de Stripe + push de compra (Cloud Function v2)
 ├── docs/
 │   ├── SETUP.md              # checklist de Firebase y Stripe
-│   └── STRIPE.md             # runbook de Stripe (links + webhook local)
+│   ├── STRIPE.md             # runbook de Stripe (links + webhook local)
+│   └── PUSH.md               # runbook de notificaciones push (FCM)
 └── src/
     ├── app/                  # rutas (Expo Router)
     │   ├── _layout.tsx       # splash → LockGate → Stack
@@ -101,7 +103,7 @@ TiltMaze/
     │   ├── settings.tsx      # Configuración real
     │   └── profile.tsx       # Perfil real
     ├── assets/balls/         # PNG de las pelotas premium
-    ├── components/           # floating-background, gradient-card, lock-gate, themed-*
+    ├── components/           # floating-background, gradient-card, lock-gate, notification-banner, themed-*
     ├── constants/            # palette.ts, theme.ts
     ├── data/
     │   ├── cosmetics.ts      # catálogo (gratis + premium + imágenes) y precios MXN
@@ -109,9 +111,9 @@ TiltMaze/
     ├── game/
     │   ├── sensors.ts        # useTilt(): inclinación calibrada
     │   └── engine.ts         # stepBall(): física
-    ├── hooks/use-bootstrap.ts # auth → hidratar Firestore → persistencia → compras
-    ├── services/             # auth, firestore, biometric, persistence, purchases
-    └── store/player.ts       # estado del jugador (zustand)
+    ├── hooks/use-bootstrap.ts # auth → hidratar → persistencia → compras → listeners FCM
+    ├── services/             # auth, firestore, biometric, persistence, purchases, notifications
+    └── store/                # player.ts (jugador), notifications.ts (banner push)
 ```
 
 El plan general del proyecto vive en **`../PLAN.md`** (fuera de `TiltMaze/`).
@@ -144,5 +146,6 @@ Edita `src/data/cosmetics.ts`. Los de `priceMXN: 0` se desbloquean solos; los pr
 
 ## Referencias
 - Runbook de Stripe: [`docs/STRIPE.md`](docs/STRIPE.md)
+- Runbook de notificaciones push: [`docs/PUSH.md`](docs/PUSH.md)
 - Setup manual de Firebase/Stripe: [`docs/SETUP.md`](docs/SETUP.md)
 - Plan del proyecto: [`../PLAN.md`](../PLAN.md)

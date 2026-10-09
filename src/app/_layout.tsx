@@ -3,9 +3,15 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { FloatingBackground } from '@/components/floating-background';
 import { LockGate } from '@/components/lock-gate';
+import { NotificationBanner } from '@/components/notification-banner';
 import { Palette } from '@/constants/palette';
 import { useBootstrap } from '@/hooks/use-bootstrap';
+import { registerBackgroundHandler } from '@/services/notifications';
 import { usePlayer } from '@/store/player';
+
+// Handler de mensajes FCM con la app en segundo plano/cerrada. Debe registrarse
+// lo antes posible, por eso va en el ámbito del módulo (no dentro de un efecto).
+registerBackgroundHandler();
 
 const navigationTheme = {
   ...DefaultTheme,
@@ -63,6 +69,7 @@ export default function RootLayout() {
           <Stack.Screen name="profile" options={{ title: 'Perfil' }} />
         </Stack>
       </LockGate>
+      <NotificationBanner />
     </ThemeProvider>
   );
 }

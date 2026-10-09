@@ -6,6 +6,7 @@ Juego de laberinto para móvil (**Expo SDK 57 / React Native 0.86 / TypeScript**
 - [`README.md`](README.md) — qué es, estado actual, estructura y cómo extenderlo.
 - [`docs/SETUP.md`](docs/SETUP.md) — checklist manual de Firebase y Stripe.
 - [`docs/STRIPE.md`](docs/STRIPE.md) — runbook de Stripe (crear cuenta/links, webhook local con el emulador + Stripe CLI).
+- [`docs/PUSH.md`](docs/PUSH.md) — runbook de notificaciones push FCM (token, pruebas, push de compra).
 - [`../PLAN.md`](../PLAN.md) — plan general por días (fuera de `TiltMaze/`).
 
 ## Objetivo y estado
@@ -20,9 +21,10 @@ Juego de laberinto para móvil (**Expo SDK 57 / React Native 0.86 / TypeScript**
 - Sistema de diseño pastel (fondo animado, tarjetas con degradado) en **todas** las pantallas.
 - **Firebase (día 4):** auth anónimo + Firestore, persistencia del progreso, onboarding, bloqueo con huella y Configuración/Perfil reales (`src/services/*`, `src/hooks/use-bootstrap.ts`).
 - **Stripe (día 5):** pago con Payment Link + webhook en Cloud Function (emulador local) que marca la compra `paid` y **desbloquea el cosmético en vivo**. Probado de extremo a extremo en modo test (`functions/index.js`, `docs/STRIPE.md`).
+- **Push FCM (día 6):** permiso + token guardado en `users/{uid}.fcmToken`, listeners (primer plano → banner in-app; segundo plano/cerrada → notificación del sistema), toggle en Configuración y **push “¡Gracias por tu compra!”** disparado por el webhook al pagar (`src/services/notifications.ts`, `functions/index.js`, `docs/PUSH.md`). Probado de extremo a extremo en teléfono.
 
 **Pendiente:**
-- **Notificaciones push FCM** (día 6) y pulido/demo (día 7).
+- **Pulido y demo** (día 7).
 - Extras opcionales: fuente redondeada, ranking, más niveles.
 
 ## Arquitectura
@@ -31,7 +33,7 @@ Juego de laberinto para móvil (**Expo SDK 57 / React Native 0.86 / TypeScript**
 src/
   app/            rutas Expo Router: _layout, index, levels, game, cosmetics, sensors, settings, profile, onboarding
   assets/balls/   PNG de las pelotas premium (ball-fuego, ball-galaxia, ball-emoji)
-  components/     floating-background, gradient-card, balance-line, coming-soon, lock-gate, themed-*
+  components/     floating-background, gradient-card, balance-line, coming-soon, lock-gate, notification-banner, themed-*
   constants/      palette.ts (colores del mockup), theme.ts (tema base del template)
   data/
     cosmetics.ts  catálogo (gratis + premium + imágenes), precios MXN, helpers ballColorFor/ballImageFor/boardThemeFor
@@ -40,10 +42,10 @@ src/
     sensors.ts    useTilt(): acelerómetro → inclinación calibrada
     engine.ts     stepBall(): gravedad, fricción, colisiones, hoyos, meta
   hooks/
-    use-bootstrap.ts  arranque: auth → hidratar Firestore → activar persistencia → escuchar compras
-  services/       auth.ts, firestore.ts, biometric.ts, persistence.ts, purchases.ts
-  store/player.ts estado global (zustand): perfil, récords, desbloqueo, cosméticos equipados
-functions/        webhook de Stripe (Cloud Function v2) — ver docs/STRIPE.md
+    use-bootstrap.ts  arranque: auth → hidratar Firestore → activar persistencia → escuchar compras → listeners FCM
+  services/       auth.ts, firestore.ts, biometric.ts, persistence.ts, purchases.ts, notifications.ts
+  store/          player.ts (perfil, récords, desbloqueo, cosméticos), notifications.ts (banner push)
+functions/        webhook de Stripe + push de compra (Cloud Function v2) — ver docs/STRIPE.md y docs/PUSH.md
 ```
 
 Puntos de entrada clave:
@@ -61,6 +63,7 @@ Puntos de entrada clave:
 - **Tema claro forzado** (`app.json` → `userInterfaceStyle: "light"`).
 - **Precios en MXN.** Pelotas $10 MXN y tableros $20 MXN (ya cumplen el mínimo real de $10 MXN de Stripe). No hay pack.
 - **Pelotas premium con imagen:** un cosmético `skin` puede traer `image` (PNG). En la UI se pinta con **`expo-image`** (`contentFit="cover"`, recortada a círculo por el contenedor); en el juego se pinta con **Skia** (`useImage` + `Group` con `clip`). Ver el gotcha de RN `Image`.
+- **Notificaciones push (FCM):** el token vive en `users/{uid}.fcmToken` (fuera del store zustand; se guarda con `saveFcmToken`/`clearFcmToken`). `settings.notifications` decide si se registra. En primer plano la app pinta un banner propio (`src/store/notifications.ts` + `notification-banner.tsx`); en segundo plano lo muestra el sistema. El push de compra lo manda `functions/index.js` al confirmarse el pago.
 - Catálogo de niveles y cosméticos son **datos estáticos** en la app (no Firestore). Firestore guarda perfil/progreso/compras.
 
 ## Gotchas (importante)
@@ -72,6 +75,12 @@ Puntos de entrada clave:
 - **Reglas de Firestore: `request.resource.data.uid`** (no `request.data.uid`) para validar al dueño al **crear** un doc. `resource.data.uid` para leer. Ver `docs/SETUP.md`.
 - **Emulador de Functions:** arráncalo con `--project tiltmaze-726ca` (o ten `.firebaserc`), si no arranca como `demo-no-project` y todas las rutas responden **404**. Define además `FUNCTIONS_DISCOVERY_TIMEOUT=120` porque el primer arranque del worker puede tardar >30 s (Windows/antivirus). Detalles en `docs/STRIPE.md`.
 - **`firebase-functions` v6 solo exporta la API v2**: usa `require('firebase-functions/v2/https').onRequest` — `functions.https.onRequest` (v1) ya no existe y la función no carga.
+- **`@react-native-firebase/messaging` es un módulo nativo → exige dev build nueva.** Tras instalarlo, Expo Go crashea con "native module not found"; hay que regenerar el build (EAS) antes de probar.
+- **Permiso de notificaciones Android 13+**: hay que pedir `POST_NOTIFICATIONS` en runtime con `PermissionsAndroid` (ya en `src/services/notifications.ts`). En Android ≤12 se concede al instalar. `requestPermission`/`AuthorizationStatus` de FCM están **deprecados** en Android; se usan solo en iOS.
+- **`setBackgroundMessageHandler` debe registrarse temprano**, fuera de un efecto: está en el ámbito del módulo de `src/app/_layout.tsx`.
+- **FCM no muestra nada con la app en primer plano**: `onMessage` entrega el mensaje y la app decide (aquí, `notification-banner`). Si está en segundo plano/cerrada y el mensaje trae `notification`, el sistema la muestra solo.
+- **Los valores de `data` de FCM llegan siempre como texto** (strings); no asumas números/objetos (ver `showBannerFromMessage`).
+- **`WebBrowser.openBrowserAsync` en Android: usa `{ createTask: false }`.** Por defecto (`createTask: true`) el navegador abre en una **tarea separada** y, al cerrarlo con la X, Android te saca al inicio del teléfono en vez de volver a la app. Con `createTask: false` vive en la misma tarea y la X regresa a TiltMaze (ver `src/app/cosmetics.tsx`).
 - **ScrollView en contenedor centrado:** darle `style={{ width: '100%' }}`; si no, se encoge al contenido y se corta a la derecha.
 - **Expo Go** sirve para Skia, sensores, degradados e íconos. **Firebase/FCM y FaceID en iOS** requieren **dev build** (`npx expo run:android` o EAS).
 - **`@react-native-firebase` v26 usa API modular** (estilo firebase-js-sdk v9+): importa funciones nombradas (`getAuth`, `signInAnonymously(auth)`, `signOut(auth)`, `onAuthStateChanged(auth, cb)`; `getFirestore`, `doc`, `getDoc`, `setDoc`) — **no** hay export default ni `FirebaseAuthTypes`. Además `DocumentSnapshot.exists()` y `.data()` son **métodos** (llámalos con paréntesis).
@@ -82,6 +91,8 @@ Puntos de entrada clave:
 - **Nuevo nivel:** crea `src/data/levels/level-N.ts` con `createLevel({ id, name, rows })` y regístralo en `src/data/levels/index.ts`. Reglas del mapa: rectangular, borde `#`, un solo `S` y `G`, y camino S→G **sin hoyos** (validable con BFS). Ver `README.md`.
 - **Nuevo cosmético:** edita `src/data/cosmetics.ts` (`priceMXN: 0` = gratis). Ver `README.md`.
 - **Imagen en una pelota:** suelta el PNG (256×256, fondo transparente) en `src/assets/balls/` y añade `image: require('../assets/balls/mi-pelota.png')` al cosmético en `src/data/cosmetics.ts`. Se recorta a círculo sola en UI y juego.
+- **Mandar un push desde el servidor:** `admin.messaging().send({ token, notification, data })` (ver `sendPurchasePush` en `functions/index.js`). Para que el tap navegue, manda `data: { navigationId: 'cosmetics' }` (u otro id).
+- **Nueva pantalla destino de un push:** añade el `navigationId` en `showBannerFromMessage` y `watchNotificationOpens` de `src/hooks/use-bootstrap.ts`.
 
 ## Comandos
 

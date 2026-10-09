@@ -16,6 +16,7 @@ import { FloatingBackground } from '@/components/floating-background';
 import { Palette } from '@/constants/palette';
 import { authenticate, checkBiometric } from '@/services/biometric';
 import { signOut } from '@/services/auth';
+import { registerForPush, unregisterPush } from '@/services/notifications';
 import { usePlayer } from '@/store/player';
 
 type SettingRowProps = {
@@ -46,6 +47,7 @@ export default function SettingsScreen() {
   const setSettings = usePlayer((state) => state.setSettings);
   const setBiometricUnlocked = usePlayer((state) => state.setBiometricUnlocked);
   const displayName = usePlayer((state) => state.displayName);
+  const uid = usePlayer((state) => state.uid);
 
   const toggleBiometric = async (value: boolean) => {
     if (!value) {
@@ -69,8 +71,31 @@ export default function SettingsScreen() {
     }
   };
 
-  const toggleNotifications = (value: boolean) => {
-    setSettings({ notifications: value });
+  const toggleNotifications = async (value: boolean) => {
+    if (!value) {
+      setSettings({ notifications: false });
+      if (uid) {
+        await unregisterPush(uid);
+      }
+      return;
+    }
+    if (!uid) {
+      Alert.alert('Espera un momento', 'La sesión aún se está iniciando. Inténtalo de nuevo.');
+      return;
+    }
+    const token = await registerForPush(uid);
+    if (token) {
+      setSettings({ notifications: true });
+      Alert.alert(
+        'Notificaciones activadas',
+        'Te avisaremos cuando se confirme una compra y de las novedades del juego.',
+      );
+    } else {
+      Alert.alert(
+        'Permiso denegado',
+        'Activa las notificaciones de TiltMaze en los ajustes del sistema para recibir avisos.',
+      );
+    }
   };
 
   const confirmSignOut = () => {
@@ -110,10 +135,10 @@ export default function SettingsScreen() {
             <SettingRow
               icon="notifications-outline"
               label="Notificaciones"
-              description="Recibe avisos y novedades (pronto)">
+              description="Recibe avisos de tus compras y novedades">
               <Switch
                 value={settings.notifications}
-                onValueChange={toggleNotifications}
+                onValueChange={(value) => void toggleNotifications(value)}
                 trackColor={{ false: '#D9D5EA', true: Palette.purple }}
                 thumbColor={Palette.surface}
               />

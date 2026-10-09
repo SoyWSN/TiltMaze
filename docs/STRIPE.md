@@ -108,7 +108,7 @@ try {
 3. Paga con la tarjeta de prueba:
    - Número: `4242 4242 4242 4242` · Fecha futura (`12/34`) · CVC `123` · CP cualquiera.
 4. Al pagar, Stripe avisa al webhook → marca la compra `paid` → la app desbloquea el cosmético
-   en vivo (aparece equipable).
+   en vivo (aparece equipable) **y envía un push de agradecimiento** (ver [`PUSH.md`](./PUSH.md)).
 
 > Verificación en Firebase console: aparece un documento en **Firestore → `purchases`** con
 > `status: "paid"`, y el cosmético en **`users/{uid}.ownedItems`**.

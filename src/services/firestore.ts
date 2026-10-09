@@ -24,3 +24,13 @@ export async function loadPlayer(uid: string): Promise<PlayerSnapshot | null> {
 export async function savePlayer(uid: string, data: PlayerSnapshot): Promise<void> {
   await setDoc(playerDoc(uid), data, { merge: true });
 }
+
+/** Guarda el token FCM del dispositivo en `users/{uid}.fcmToken`. */
+export async function saveFcmToken(uid: string, token: string): Promise<void> {
+  await setDoc(playerDoc(uid), { fcmToken: token }, { merge: true });
+}
+
+/** Borra el token FCM (al desactivar las notificaciones). */
+export async function clearFcmToken(uid: string): Promise<void> {
+  await setDoc(playerDoc(uid), { fcmToken: null }, { merge: true });
+}

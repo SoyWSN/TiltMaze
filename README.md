@@ -9,7 +9,7 @@ Juego de laberinto para móvil (**React Native + Expo**) controlado con la **inc
 ## Estado actual
 
 ### ✅ Implementado
-- **Juego jugable con 5 niveles** dibujados a mano (tiles ASCII): *Primeros pasos, Campo minado, Encrucijada, Riesgo alto, Serpiente*.
+- **Juego jugable con 10 niveles** dibujados a mano (tiles ASCII): *Primeros pasos, Campo minado, Encrucijada, Riesgo alto, Serpiente, Dédalo, Espejo, Trampa, Marea, Vórtice*.
 - **Control por acelerómetro** con **calibración** ("Centrar") y ajuste de **sensibilidad**.
 - **Física propia** en unidades de casilla: gravedad según inclinación, fricción, choques círculo-muro, hoyos (vuelven al inicio) y meta.
 - **Render con Skia** (@shopify/react-native-skia) a 60 fps.
@@ -23,7 +23,7 @@ Juego de laberinto para móvil (**React Native + Expo**) controlado con la **inc
 
 ### 🚧 Pendiente (roadmap por días)
 - **Día 7 — Pulido y demo.**
-- Extras opcionales: fuente redondeada (tipo *Fredoka/Baloo*), ranking, más niveles.
+- Extras opcionales: fuente redondeada (tipo *Fredoka/Baloo*), ranking.
 
 ### Mapa de requisitos
 | Requisito | Estado |
@@ -107,7 +107,7 @@ TiltMaze/
     ├── constants/            # palette.ts, theme.ts
     ├── data/
     │   ├── cosmetics.ts      # catálogo (gratis + premium + imágenes) y precios MXN
-    │   └── levels/           # types.ts, level-1..5.ts, index.ts (registro)
+    │   └── levels/           # types.ts, level-1..10.ts, index.ts (registro)
     ├── game/
     │   ├── sensors.ts        # useTilt(): inclinación calibrada
     │   └── engine.ts         # stepBall(): física
@@ -133,7 +133,7 @@ El plan general del proyecto vive en **`../PLAN.md`** (fuera de `TiltMaze/`).
      '#########',
    ] as const;
 
-   export const LEVEL_N = createLevel({ id: 6, name: 'Mi nivel', rows: layout });
+   export const LEVEL_N = createLevel({ id: 11, name: 'Mi nivel', rows: layout });
    ```
 2. Regístralo en `src/data/levels/index.ts` (array `LEVELS`).
 

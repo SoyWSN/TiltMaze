@@ -14,7 +14,7 @@ Juego de laberinto para móvil (**Expo SDK 57 / React Native 0.86 / TypeScript**
 **Requisitos del proyecto:** sensores del teléfono, base de datos (Firebase), compras (Stripe), notificaciones push y biometría (huella).
 
 **Implementado y probado en teléfono (dev build de EAS):**
-- Juego jugable con **5 niveles** (mapas ASCII), física propia, render con **Skia**.
+- Juego jugable con **10 niveles** (mapas ASCII), física propia, render con **Skia**.
 - Control por **acelerómetro** con calibración y sensibilidad (`src/game/sensors.ts` → `useTilt`).
 - **Pantalla de niveles** con desbloqueo progresivo y mejores tiempos (`src/app/levels.tsx`).
 - **Cosméticos** equipables: 7 pelotas de color gratis + **3 pelotas premium con imagen** (Fuego/Galaxia/Emoji) + temas de tablero, con premium bloqueado tras Stripe (`src/data/cosmetics.ts`, `src/app/cosmetics.tsx`).
@@ -25,7 +25,7 @@ Juego de laberinto para móvil (**Expo SDK 57 / React Native 0.86 / TypeScript**
 
 **Pendiente:**
 - **Pulido y demo** (día 7).
-- Extras opcionales: fuente redondeada, ranking, más niveles.
+- Extras opcionales: fuente redondeada, ranking.
 
 ## Arquitectura
 
@@ -37,7 +37,7 @@ src/
   constants/      palette.ts (colores del mockup), theme.ts (tema base del template)
   data/
     cosmetics.ts  catálogo (gratis + premium + imágenes), precios MXN, helpers ballColorFor/ballImageFor/boardThemeFor
-    levels/       types.ts (createLevel/getTile), level-1..5.ts, index.ts (registro LEVELS)
+    levels/       types.ts (createLevel/getTile), level-1..10.ts, index.ts (registro LEVELS)
   game/
     sensors.ts    useTilt(): acelerómetro → inclinación calibrada
     engine.ts     stepBall(): gravedad, fricción, colisiones, hoyos, meta

@@ -55,12 +55,23 @@ export function watchPurchases(uid: string): () => void {
     collection(getFirestore(), PURCHASES),
     where('uid', '==', uid),
   );
-  return onSnapshot(purchasesQuery, (snapshot) => {
-    for (const doc of snapshot.docs) {
-      const data = doc.data();
-      if (data.status === 'paid') {
-        grantItem(data.productId);
+  return onSnapshot(
+    purchasesQuery,
+    (snapshot) => {
+      // Al cerrar sesión (o si falla la escucha) puede llegar un snapshot nulo:
+      // sin este guardado, `snapshot.docs` lanzaba "Cannot read property 'docs' of null".
+      if (!snapshot) {
+        return;
       }
-    }
-  });
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        if (data.status === 'paid') {
+          grantItem(data.productId);
+        }
+      }
+    },
+    (error) => {
+      console.warn('No se pudieron escuchar las compras', error);
+    },
+  );
 }

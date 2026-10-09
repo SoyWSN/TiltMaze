@@ -7,11 +7,11 @@ import {
   ScrollView,
   StyleSheet,
   Switch,
-  Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppText as Text } from '@/components/app-text';
 import { FloatingBackground } from '@/components/floating-background';
 import { Palette } from '@/constants/palette';
 import { authenticate, checkBiometric } from '@/services/biometric';
@@ -101,10 +101,20 @@ export default function SettingsScreen() {
   const confirmSignOut = () => {
     Alert.alert(
       'Cerrar sesión',
-      'Se creará un nuevo invitado y perderás el progreso actual de este dispositivo.',
+      'Se creará un nuevo invitado y volverás a la pantalla de inicio. Perderás el progreso actual de este dispositivo.',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Cerrar sesión', style: 'destructive', onPress: () => void signOut() },
+        {
+          text: 'Cerrar sesión',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              await signOut();
+              // Vuelve al "login" (onboarding) con el invitado nuevo.
+              router.replace('/onboarding');
+            })();
+          },
+        },
       ],
     );
   };

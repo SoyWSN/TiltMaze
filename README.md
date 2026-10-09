@@ -16,7 +16,7 @@ Juego de laberinto para móvil (**React Native + Expo**) controlado con la **inc
 - **Pantalla de niveles** con cuadrícula: número grande, nombre, mejor tiempo, **desbloqueo progresivo** y niveles bloqueados en gris.
 - **Overlay de victoria** con animación *pop*, tiempo y botones **Repetir / Siguiente** (el "Siguiente" desaparece en el último nivel).
 - **Cosméticos**: 7 pelotas de color **gratis** + **3 pelotas premium con imagen** (Fuego, Galaxia, Emoji) equipables, temas de tablero (Madera gratis, Bamboo/Neón premium) y candados con precio para lo premium. El cosmético equipado se aplica **al juego y a la pantalla de sensores**.
-- **Sistema de diseño** acorde a un mockup: fondo pastel animado, tarjetas con degradado y sombra de color, tipografía bicolor.
+- **Sistema de diseño** acorde a un mockup: fondo pastel animado, tarjetas con degradado y sombra de color, y tipografía redondeada **Fredoka**.
 - **Firebase (día 4):** auth anónimo + Firestore, **persistencia real** del progreso (récords, desbloqueos, cosméticos), **bloqueo con huella**, **onboarding** (nombre + huella) y pantallas reales de **Configuración** y **Perfil**. Probado en dev build.
 - **Stripe (día 5):** compra de cosméticos con **Payment Links** (modo test) + **webhook** en Cloud Function que marca la compra `paid` y **desbloquea el cosmético en vivo**. Flujo probado de extremo a extremo.
 - **Notificaciones push (día 6):** token FCM guardado por jugador, permiso + interruptor en Configuración, banner in-app en primer plano, notificación del sistema en segundo plano y push **“¡Gracias por tu compra!”** disparado por el webhook al pagar.
@@ -45,7 +45,7 @@ Juego de laberinto para móvil (**React Native + Expo**) controlado con la **inc
 | Render del juego | `@shopify/react-native-skia` |
 | Sensores | `expo-sensors` (Accelerometer) |
 | Estado global | `zustand` |
-| UI | `expo-linear-gradient`, `@expo/vector-icons` (Ionicons), `expo-image`, `react-native-safe-area-context` |
+| UI | `expo-linear-gradient`, `@expo/vector-icons` (Ionicons), `expo-image`, `@expo-google-fonts/fredoka`, `react-native-safe-area-context` |
 | Biometría | `expo-local-authentication` |
 | Datos | Firebase (`@react-native-firebase`: auth anónimo + Firestore) |
 | Compras | Stripe Payment Links + Cloud Function (webhook) |
@@ -58,13 +58,29 @@ Juego de laberinto para móvil (**React Native + Expo**) controlado con la **inc
 ```bash
 cd TiltMaze
 npm install
-npx expo start --dev-client   # requiere la dev build instalada en el teléfono
+```
+
+### Todo de una sola vez (recomendado)
+
+```bash
+npm run dev
+```
+
+Levanta en **una sola terminal** Expo + Stripe CLI + emulador de Firebase, **detecta el secreto de Stripe automáticamente** y prefija los logs de cada servicio (`[expo]`, `[stripe]`, `[firebase]`). `Ctrl+C` detiene todo.
+
+> Requiere la **dev build** instalada, `stripe` y `firebase` en el PATH, y `functions/serviceAccountKey.json` (ver [`docs/STRIPE.md`](docs/STRIPE.md)).
+
+### Por separado (si prefieres varias terminales)
+
+```bash
+npm run dev:expo        # servidor de Metro (dev client)
+npm run dev:stripe      # reenvía los pagos al webhook local
+npm run dev:emulators   # emulador de Functions (necesita las env vars; ver docs/STRIPE.md)
 ```
 
 - El proyecto usa **dev build** (EAS): **Expo Go ya no sirve** porque Firebase/FCM requieren código nativo.
 - El **acelerómetro solo funciona en un teléfono físico** (no en emuladores).
-- Para probar las **compras** (Stripe), sigue [`docs/STRIPE.md`](docs/STRIPE.md) (webhook local con el emulador + Stripe CLI).
-- Para probar las **notificaciones push** (FCM), sigue [`docs/PUSH.md`](docs/PUSH.md).
+- Para la compra paso a paso: [`docs/STRIPE.md`](docs/STRIPE.md). Para push: [`docs/PUSH.md`](docs/PUSH.md).
 
 Comandos útiles:
 
@@ -103,8 +119,8 @@ TiltMaze/
     │   ├── settings.tsx      # Configuración real
     │   └── profile.tsx       # Perfil real
     ├── assets/balls/         # PNG de las pelotas premium
-    ├── components/           # floating-background, gradient-card, lock-gate, notification-banner, themed-*
-    ├── constants/            # palette.ts, theme.ts
+    ├── components/           # app-text, floating-background, gradient-card, lock-gate, notification-banner, themed-*
+    ├── constants/            # palette.ts, fonts.ts (Fredoka), theme.ts
     ├── data/
     │   ├── cosmetics.ts      # catálogo (gratis + premium + imágenes) y precios MXN
     │   └── levels/           # types.ts, level-1..10.ts, index.ts (registro)
@@ -141,6 +157,12 @@ Reglas del mapa: rectangular, borde cerrado con `#`, **un solo** `S` y `G`, `O` 
 
 ### Agregar un cosmético
 Edita `src/data/cosmetics.ts`. Los de `priceMXN: 0` se desbloquean solos; los premium usan `paymentLinkUrl` (Stripe). Para una pelota con **imagen**, coloca el PNG (256×256, fondo transparente) en `src/assets/balls/` y añade `image: require('../assets/balls/archivo.png')` — se recorta a círculo sola en la tienda y en el juego.
+
+### Texto
+Toda la app usa la fuente redondeada **Fredoka**. En los componentes importa el wrapper en vez del `Text` de react-native (aplica la fuente sola, respetando el `fontWeight` del estilo):
+```tsx
+import { AppText as Text } from '@/components/app-text';
+```
 
 ---
 

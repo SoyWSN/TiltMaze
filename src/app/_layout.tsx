@@ -1,9 +1,12 @@
 import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useFonts } from 'expo-font';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { AppText as Text } from '@/components/app-text';
 import { FloatingBackground } from '@/components/floating-background';
 import { LockGate } from '@/components/lock-gate';
 import { NotificationBanner } from '@/components/notification-banner';
+import { FONT_SOURCES } from '@/constants/fonts';
 import { Palette } from '@/constants/palette';
 import { useBootstrap } from '@/hooks/use-bootstrap';
 import { registerBackgroundHandler } from '@/services/notifications';
@@ -39,8 +42,10 @@ function LoadingScreen() {
 export default function RootLayout() {
   useBootstrap();
   const status = usePlayer((state) => state.status);
+  const [fontsLoaded, fontError] = useFonts(FONT_SOURCES);
 
-  if (status !== 'ready') {
+  // Espera a que estén listos la sesión y la fuente redondeada (o a que la fuente falle).
+  if (status !== 'ready' || (!fontsLoaded && !fontError)) {
     return <LoadingScreen />;
   }
 

@@ -4,12 +4,11 @@ import { useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppText as Text, AppTextInput as TextInput } from '@/components/app-text';
 import { FloatingBackground } from '@/components/floating-background';
 import { Palette, type GradientColors } from '@/constants/palette';
 import { getCosmetic } from '@/data/cosmetics';

@@ -5,9 +5,10 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppText as Text } from '@/components/app-text';
 import { Palette } from '@/constants/palette';
 import { useNotifications } from '@/store/notifications';
 

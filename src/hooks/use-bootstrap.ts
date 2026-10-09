@@ -54,6 +54,11 @@ export function useBootstrap(): void {
       }
       void (async () => {
         if (!user) {
+          // Se cerró sesión: detén la escucha de compras y la persistencia del uid
+          // anterior antes de crear el invitado nuevo (evita errores de permisos).
+          purchasesUnsub?.();
+          purchasesUnsub = null;
+          stopPersistence();
           // Sin sesión: crea un invitado anónimo (vuelve a disparar el listener).
           try {
             await signInAnonymously();

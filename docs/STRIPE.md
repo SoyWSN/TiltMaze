@@ -4,6 +4,11 @@ Este archivo explica cómo dejar funcionando la compra de cosméticos de **TiltM
 Stripe (modo test) y el webhook local. Complementa a [`SETUP.md`](./SETUP.md) (que tiene
 el checklist de la consola).
 
+> ⚡ **Atajo:** desde la raíz del proyecto, `npm run dev` levanta **Expo + Stripe CLI + emulador
+> de Functions en una sola terminal** y **detecta el `whsec_...` automáticamente** (no hay que
+> copiarlo a mano). Las instrucciones manuales de abajo quedan para entender el detalle o
+> correr cada servicio por separado.
+
 ## Qué ya está implementado en código
 
 - **Flujo de compra** (`src/app/cosmetics.tsx` + `src/services/purchases.ts`): al tocar un

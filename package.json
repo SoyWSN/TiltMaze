@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo-google-fonts/fredoka": "^0.4.1",
     "@expo/ui": "~57.0.21",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-firebase/app": "^26.4.0",
@@ -46,6 +47,10 @@
   },
   "scripts": {
     "start": "expo start",
+    "dev": "node scripts/dev.mjs",
+    "dev:expo": "expo start --dev-client",
+    "dev:stripe": "stripe listen --forward-to http://localhost:5001/tiltmaze-726ca/us-central1/stripeWebhook --events checkout.session.completed",
+    "dev:emulators": "firebase emulators:start --only functions --project tiltmaze-726ca",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",

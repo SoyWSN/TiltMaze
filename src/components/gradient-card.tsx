@@ -1,7 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type PressableProps } from 'react-native';
+import { Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 
+import { AppText as Text } from '@/components/app-text';
 import { Palette, type GradientColors } from '@/constants/palette';
 
 type GradientCardProps = Omit<PressableProps, 'style' | 'children'> & {

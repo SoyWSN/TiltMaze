@@ -7,12 +7,11 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppText as Text, AppTextInput as TextInput } from '@/components/app-text';
 import { FloatingBackground } from '@/components/floating-background';
 import { Palette } from '@/constants/palette';
 import { authenticate, checkBiometric } from '@/services/biometric';

@@ -33,8 +33,8 @@ Juego de laberinto para móvil (**Expo SDK 57 / React Native 0.86 / TypeScript**
 src/
   app/            rutas Expo Router: _layout, index, levels, game, cosmetics, sensors, settings, profile, onboarding
   assets/balls/   PNG de las pelotas premium (ball-fuego, ball-galaxia, ball-emoji)
-  components/     floating-background, gradient-card, balance-line, coming-soon, lock-gate, notification-banner, themed-*
-  constants/      palette.ts (colores del mockup), theme.ts (tema base del template)
+  components/     app-text (Text/TextInput con Fredoka), floating-background, gradient-card, balance-line, coming-soon, lock-gate, notification-banner, themed-*
+  constants/      palette.ts (colores del mockup), fonts.ts (Fredoka: carga + mapeo de pesos), theme.ts (tema base del template)
   data/
     cosmetics.ts  catálogo (gratis + premium + imágenes), precios MXN, helpers ballColorFor/ballImageFor/boardThemeFor
     levels/       types.ts (createLevel/getTile), level-1..10.ts, index.ts (registro LEVELS)
@@ -46,6 +46,7 @@ src/
   services/       auth.ts, firestore.ts, biometric.ts, persistence.ts, purchases.ts, notifications.ts
   store/          player.ts (perfil, récords, desbloqueo, cosméticos), notifications.ts (banner push)
 functions/        webhook de Stripe + push de compra (Cloud Function v2) — ver docs/STRIPE.md y docs/PUSH.md
+scripts/          dev.mjs: levanta Expo + Stripe CLI + emulador de Firebase en una sola terminal
 ```
 
 Puntos de entrada clave:
@@ -64,6 +65,7 @@ Puntos de entrada clave:
 - **Precios en MXN.** Pelotas $10 MXN y tableros $20 MXN (ya cumplen el mínimo real de $10 MXN de Stripe). No hay pack.
 - **Pelotas premium con imagen:** un cosmético `skin` puede traer `image` (PNG). En la UI se pinta con **`expo-image`** (`contentFit="cover"`, recortada a círculo por el contenedor); en el juego se pinta con **Skia** (`useImage` + `Group` con `clip`). Ver el gotcha de RN `Image`.
 - **Notificaciones push (FCM):** el token vive en `users/{uid}.fcmToken` (fuera del store zustand; se guarda con `saveFcmToken`/`clearFcmToken`). `settings.notifications` decide si se registra. En primer plano la app pinta un banner propio (`src/store/notifications.ts` + `notification-banner.tsx`); en segundo plano lo muestra el sistema. El push de compra lo manda `functions/index.js` al confirmarse el pago.
+- **Tipografía:** toda la app usa la fuente redondeada **Fredoka**. En vez del `Text` de react-native, importa `import { AppText as Text } from '@/components/app-text'` (y `AppTextInput` para inputs): el wrapper fija la familia correcta según el `fontWeight` del estilo. Las fuentes se cargan en `_layout.tsx` (`FONT_SOURCES` de `src/constants/fonts.ts`).
 - Catálogo de niveles y cosméticos son **datos estáticos** en la app (no Firestore). Firestore guarda perfil/progreso/compras.
 
 ## Gotchas (importante)
@@ -81,6 +83,7 @@ Puntos de entrada clave:
 - **FCM no muestra nada con la app en primer plano**: `onMessage` entrega el mensaje y la app decide (aquí, `notification-banner`). Si está en segundo plano/cerrada y el mensaje trae `notification`, el sistema la muestra solo.
 - **Los valores de `data` de FCM llegan siempre como texto** (strings); no asumas números/objetos (ver `showBannerFromMessage`).
 - **`WebBrowser.openBrowserAsync` en Android: usa `{ createTask: false }`.** Por defecto (`createTask: true`) el navegador abre en una **tarea separada** y, al cerrarlo con la X, Android te saca al inicio del teléfono en vez de volver a la app. Con `createTask: false` vive en la misma tarea y la X regresa a TiltMaze (ver `src/app/cosmetics.tsx`).
+- **Fredoka trae cada peso como familia separada** (`Fredoka_300Light`…`Fredoka_700Bold`): `fontWeight` por sí solo no basta. `AppText` mapea `fontWeight` → familia y fija `fontWeight: 'normal'` para evitar la negrita sintética. Si escribes un `Text` sin el wrapper, ese texto se queda con la fuente del sistema.
 - **ScrollView en contenedor centrado:** darle `style={{ width: '100%' }}`; si no, se encoge al contenido y se corta a la derecha.
 - **Expo Go** sirve para Skia, sensores, degradados e íconos. **Firebase/FCM y FaceID en iOS** requieren **dev build** (`npx expo run:android` o EAS).
 - **`@react-native-firebase` v26 usa API modular** (estilo firebase-js-sdk v9+): importa funciones nombradas (`getAuth`, `signInAnonymously(auth)`, `signOut(auth)`, `onAuthStateChanged(auth, cb)`; `getFirestore`, `doc`, `getDoc`, `setDoc`) — **no** hay export default ni `FirebaseAuthTypes`. Además `DocumentSnapshot.exists()` y `.data()` son **métodos** (llámalos con paréntesis).
@@ -97,6 +100,10 @@ Puntos de entrada clave:
 ## Comandos
 
 ```bash
+npm run dev              # TODO: Expo + Stripe CLI + emulador de Functions (detecta el whsec solo)
+npm run dev:expo         # solo Metro (dev client)
+npm run dev:stripe       # solo Stripe CLI
+npm run dev:emulators    # solo el emulador de Functions (necesita env vars)
 npx expo install <pkg>   # usar SIEMPRE esto (no npm add) para versiones compatibles con el SDK
 npx expo start           # servidor de desarrollo (--clear para limpiar caché de Metro)
 npx tsc --noEmit         # typecheck

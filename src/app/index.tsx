@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -17,6 +17,10 @@ export default function HomeScreen() {
   const profileSubtitle = displayName
     ? `${displayName} · Nivel ${unlockedLevels}`
     : `Invitado · Nivel ${unlockedLevels}`;
+
+  if (displayName === null) {
+    return <Redirect href="/onboarding" />;
+  }
 
   return (
     <FloatingBackground>

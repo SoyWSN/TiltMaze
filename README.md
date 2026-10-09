@@ -15,19 +15,12 @@ Juego de laberinto para móvil (**React Native + Expo**) controlado con la **inc
 - **Render con Skia** (@shopify/react-native-skia) a 60 fps.
 - **Pantalla de niveles** con cuadrícula: número grande, nombre, mejor tiempo, **desbloqueo progresivo** y niveles bloqueados en gris.
 - **Overlay de victoria** con animación *pop*, tiempo y botones **Repetir / Siguiente** (el "Siguiente" desaparece en el último nivel).
-- **Cosméticos**: 7 pelotas de color **gratis** equipables, temas de tablero (Madera gratis, Bamboo/Neón premium) y candados con precio para lo premium. El cosmético equipado se aplica **al juego y a la pantalla de sensores**.
+- **Cosméticos**: 7 pelotas de color **gratis** + **3 pelotas premium con imagen** (Fuego, Galaxia, Emoji) equipables, temas de tablero (Madera gratis, Bamboo/Neón premium) y candados con precio para lo premium. El cosmético equipado se aplica **al juego y a la pantalla de sensores**.
 - **Sistema de diseño** acorde a un mockup: fondo pastel animado, tarjetas con degradado y sombra de color, tipografía bicolor.
-- **Pantallas provisionales** con el mismo estilo para Tienda… (Configuración, Perfil), y prueba de sensores.
+- **Firebase (día 4):** auth anónimo + Firestore, **persistencia real** del progreso (récords, desbloqueos, cosméticos), **bloqueo con huella**, **onboarding** (nombre + huella) y pantallas reales de **Configuración** y **Perfil**. Probado en dev build.
+- **Stripe (día 5):** compra de cosméticos con **Payment Links** (modo test) + **webhook** en Cloud Function que marca la compra `paid` y **desbloquea el cosmético en vivo**. Flujo probado de extremo a extremo.
 
 ### 🚧 Pendiente (roadmap por días)
-- **Día 3 (resto) — Persistencia:** el progreso (récords, niveles desbloqueados, cosméticos) vive **solo en memoria** (`zustand`) y se reinicia al cerrar la app. Falta guardarlo en Firestore.
-- **Día 4 — Firebase + biometría:**
-  - Conectar `google-services.json` (ya está en la raíz) con `@react-native-firebase`.
-  - Firestore: documentos `users` y `purchases` + reglas.
-  - Auth anónimo (habilitar en consola).
-  - **Desbloqueo con huella** (`expo-local-authentication`) + pantalla de Configuración real.
-  - Requiere **dev build** (ya no Expo Go).
-- **Día 5 — Stripe:** crear los Payment Links en MXN, flujo de compra y **Cloud Function (webhook)** que otorga el cosmético. Precios $5–$10 MXN (modo test; **mínimo real en MXN = $10**).
 - **Día 6 — Notificaciones push (FCM):** permiso, token, listeners y envío de prueba desde la consola de Firebase.
 - **Día 7 — Pulido y demo.**
 - Extras opcionales: fuente redondeada (tipo *Fredoka/Baloo*), ranking, más niveles.
@@ -36,10 +29,10 @@ Juego de laberinto para móvil (**React Native + Expo**) controlado con la **inc
 | Requisito | Estado |
 |---|---|
 | Sensores (acelerómetro) | ✅ Implementado |
-| Base de datos (Firestore) | 🚧 Proyecto creado, falta integrar |
-| Huella dactilar | 🚧 Librería instalada, falta el flujo |
-| Compras (Stripe) | 🚧 Catálogo listo, falta pago + webhook |
-| Notificaciones push | ⬜ Pendiente |
+| Base de datos (Firestore) | ✅ Implementado y probado |
+| Huella dactilar | ✅ Implementado y probado |
+| Compras (Stripe) | ✅ Implementado y probado (modo test) |
+| Notificaciones push | ⬜ Pendiente (día 6) |
 
 ---
 
@@ -52,10 +45,11 @@ Juego de laberinto para móvil (**React Native + Expo**) controlado con la **inc
 | Render del juego | `@shopify/react-native-skia` |
 | Sensores | `expo-sensors` (Accelerometer) |
 | Estado global | `zustand` |
-| UI | `expo-linear-gradient`, `@expo/vector-icons` (Ionicons), `react-native-safe-area-context` |
-| Biometría | `expo-local-authentication` (instalado) |
-| Datos / push | Firebase (Firestore + FCM) — pendiente |
-| Compras | Stripe Payment Links + Cloud Function — pendiente |
+| UI | `expo-linear-gradient`, `@expo/vector-icons` (Ionicons), `expo-image`, `react-native-safe-area-context` |
+| Biometría | `expo-local-authentication` |
+| Datos | Firebase (`@react-native-firebase`: auth anónimo + Firestore) |
+| Compras | Stripe Payment Links + Cloud Function (webhook) |
+| Push | FCM — pendiente (día 6) |
 
 ---
 
@@ -64,12 +58,12 @@ Juego de laberinto para móvil (**React Native + Expo**) controlado con la **inc
 ```bash
 cd TiltMaze
 npm install
-npx expo start        # abre con Expo Go o dev build
+npx expo start --dev-client   # requiere la dev build instalada en el teléfono
 ```
 
-- **Expo Go** funciona para: juego, sensores, cosméticos, navegación y prueba de sensores.
-- Necesitarás **dev build** (`npx expo run:android` o EAS) cuando integres **Firebase/FCM** (día 4-6).
+- El proyecto usa **dev build** (EAS): **Expo Go ya no sirve** porque Firebase/FCM requieren código nativo.
 - El **acelerómetro solo funciona en un teléfono físico** (no en emuladores).
+- Para probar las **compras** (Stripe), sigue [`docs/STRIPE.md`](docs/STRIPE.md) (webhook local con el emulador + Stripe CLI).
 
 Comandos útiles:
 
@@ -86,29 +80,38 @@ npx expo start --clear  # iniciar limpiando caché de Metro
 
 ```
 TiltMaze/
-├── app.json                  # config de Expo (tema claro, plugins de sensores y biometría)
-├── google-services.json      # config de Firebase (aún sin conectar)
-├── docs/SETUP.md             # checklist manual de Firebase y Stripe
+├── app.json                  # config de Expo (tema claro, plugins de sensores/biometría)
+├── google-services.json      # config de Firebase
+├── .firebaserc               # proyecto por defecto (tiltmaze-726ca)
+├── firebase.json             # config de Functions
+├── eas.json                  # perfiles de EAS Build
+├── functions/                # webhook de Stripe (Cloud Function v2)
+├── docs/
+│   ├── SETUP.md              # checklist de Firebase y Stripe
+│   └── STRIPE.md             # runbook de Stripe (links + webhook local)
 └── src/
     ├── app/                  # rutas (Expo Router)
-    │   ├── _layout.tsx       # Stack + tema de navegación
-    │   ├── index.tsx         # pantalla principal (mockup)
+    │   ├── _layout.tsx       # splash → LockGate → Stack
+    │   ├── index.tsx         # pantalla principal
+    │   ├── onboarding.tsx    # nombre + huella (primer arranque)
     │   ├── levels.tsx        # selección de niveles
     │   ├── game.tsx          # juego (Skia + física)
     │   ├── cosmetics.tsx     # cosméticos (equipar/comprar)
     │   ├── sensors.tsx       # prueba de sensores
-    │   ├── settings.tsx      # placeholder (día 4)
-    │   └── profile.tsx       # placeholder (día 4)
-    ├── components/           # floating-background, gradient-card, balance-line, coming-soon, themed-*
+    │   ├── settings.tsx      # Configuración real
+    │   └── profile.tsx       # Perfil real
+    ├── assets/balls/         # PNG de las pelotas premium
+    ├── components/           # floating-background, gradient-card, lock-gate, themed-*
     ├── constants/            # palette.ts, theme.ts
     ├── data/
-    │   ├── cosmetics.ts      # catálogo (gratis + premium) y precios MXN
+    │   ├── cosmetics.ts      # catálogo (gratis + premium + imágenes) y precios MXN
     │   └── levels/           # types.ts, level-1..5.ts, index.ts (registro)
     ├── game/
     │   ├── sensors.ts        # useTilt(): inclinación calibrada
     │   └── engine.ts         # stepBall(): física
-    ├── store/player.ts       # estado del jugador (zustand)
-    └── hooks/
+    ├── hooks/use-bootstrap.ts # auth → hidratar Firestore → persistencia → compras
+    ├── services/             # auth, firestore, biometric, persistence, purchases
+    └── store/player.ts       # estado del jugador (zustand)
 ```
 
 El plan general del proyecto vive en **`../PLAN.md`** (fuera de `TiltMaze/`).
@@ -135,10 +138,11 @@ El plan general del proyecto vive en **`../PLAN.md`** (fuera de `TiltMaze/`).
 Reglas del mapa: rectangular, borde cerrado con `#`, **un solo** `S` y `G`, `O` = hoyo, `.` = libre, y debe existir **camino S→G sin pasar por hoyos**. Recomendado ≤ 11 columnas para móvil.
 
 ### Agregar un cosmético
-Edita `src/data/cosmetics.ts`. Los de `priceMXN: 0` se desbloquean solos; los premium usan `paymentLinkUrl` (Stripe, día 5).
+Edita `src/data/cosmetics.ts`. Los de `priceMXN: 0` se desbloquean solos; los premium usan `paymentLinkUrl` (Stripe). Para una pelota con **imagen**, coloca el PNG (256×256, fondo transparente) en `src/assets/balls/` y añade `image: require('../assets/balls/archivo.png')` — se recorta a círculo sola en la tienda y en el juego.
 
 ---
 
 ## Referencias
+- Runbook de Stripe: [`docs/STRIPE.md`](docs/STRIPE.md)
 - Setup manual de Firebase/Stripe: [`docs/SETUP.md`](docs/SETUP.md)
 - Plan del proyecto: [`../PLAN.md`](../PLAN.md)

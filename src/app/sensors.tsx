@@ -1,11 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FloatingBackground } from '@/components/floating-background';
 import { Palette } from '@/constants/palette';
-import { ballColorFor } from '@/data/cosmetics';
+import { ballColorFor, ballImageFor } from '@/data/cosmetics';
 import { useTilt } from '@/game/sensors';
 import { usePlayer } from '@/store/player';
 
@@ -18,6 +19,7 @@ const SENSITIVITY_STEP = 0.25;
 export default function SensorsScreen() {
   const { data, tilt, neutral, sensitivity, available, calibrate, setSensitivity } = useTilt();
   const ballColor = ballColorFor(usePlayer((state) => state.equipped.skinId));
+  const ballImage = ballImageFor(usePlayer((state) => state.equipped.skinId));
 
   if (!available) {
     return (
@@ -45,8 +47,16 @@ export default function SensorsScreen() {
           showsVerticalScrollIndicator={false}>
           <View style={styles.previewBox}>
             <View style={[styles.previewDot, { left: dotLeft, top: dotTop }]}>
-              <View style={[styles.previewDotFill, { backgroundColor: ballColor }]}>
-                <View style={styles.previewShine} />
+              <View
+                style={[
+                  styles.previewDotFill,
+                  { backgroundColor: ballImage ? 'transparent' : ballColor },
+                ]}>
+                {ballImage ? (
+                  <Image source={ballImage} style={styles.ballImage} contentFit="cover" />
+                ) : (
+                  <View style={styles.previewShine} />
+                )}
               </View>
             </View>
           </View>
@@ -169,9 +179,16 @@ const styles = StyleSheet.create({
   previewDotFill: {
     flex: 1,
     borderRadius: DOT_SIZE / 2,
-    padding: 7,
+    overflow: 'hidden',
+  },
+  ballImage: {
+    width: '100%',
+    height: '100%',
   },
   previewShine: {
+    position: 'absolute',
+    top: 7,
+    left: 7,
     width: 9,
     height: 9,
     borderRadius: 5,

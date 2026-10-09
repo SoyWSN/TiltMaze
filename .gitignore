@@ -41,3 +41,12 @@ example
 # generated native folders
 /ios
 /android
+
+# Firebase Functions
+functions/node_modules/
+functions/serviceAccountKey.json
+*-service-account*.json
+
+# Firebase emulators (logs locales)
+firebase-debug.log
+ui-debug.log

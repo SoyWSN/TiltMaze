@@ -54,7 +54,7 @@ service cloud.firestore {
     // solo el webhook (Admin SDK, que ignora reglas) las actualiza
     match /purchases/{purchaseId} {
       allow read: if request.auth != null && resource.data.uid == request.auth.uid;
-      allow create: if request.auth != null && request.data.uid == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
     // Nada más es accesible
@@ -111,24 +111,24 @@ El webhook del día 5 corre como Cloud Function. Dos opciones:
 - [ ] Ir a <https://dashboard.stripe.com> y crear cuenta.
 - [ ] Quedarse en **modo test** (por defecto al crear la cuenta; el switch "Test mode" arriba a la derecha).
 
-### 2.2 Crear los Payment Links de los 6 cosméticos
+### 2.2 Crear los Payment Links de los 5 cosméticos
 Por cada producto de `src/data/cosmetics.ts`:
 - [ ] **Product catalog → + Add product** → nombre (p. ej. "Skin de bola: Fuego") → **precio único (one-time)** en **MXN**.
 - [ ] Después: **Payment links → + New** → seleccionar el producto → **crear el link**.
 - [ ] Apuntar en una tabla (yo lo haré en el catálogo de la app):
   | Cosmético | URL del Payment Link (`https://buy.stripe.com/...`) | Price ID (`price_...`) |
 
-Precios exactos: skins **$5 MXN** (Fuego, Galaxia, Emoji), temas **$8 MXN** (Bamboo, Neón), pack **$10 MXN**.
+Precios: skins **$10 MXN** (Fuego, Galaxia, Emoji) y temas **$20 MXN** (Bamboo, Neón). El pack se eliminó.
 
-> ⚠️ El mínimo de cargo de Stripe en MXN **en modo real** es $10 MXN. En modo test los montos de $5–$8 funcionan sin problema. Como la app no se publica, nos quedamos en test.
+> ⚠️ El mínimo de cargo de Stripe en MXN **en modo real** es $10 MXN. Con precios de $10–$20 MXN la compra funcionaría también en modo real.
 
-### 2.3 Cómo sabremos quién compró (importante)
-Cuando la app abra el Payment Link le añadirá `?client_reference_id=<uid>` (el uid de Firebase del jugador). El webhook `checkout.session.completed` recibe ese valor y con él + el Price ID sabemos **qué jugador compró qué cosmético** → se lo otorgamos en Firestore. No necesitas configurar nada extra, solo apuntar bien los Price IDs.
+### 2.3 Cómo sabemos quién compró (importante)
+Cuando la app abre el Payment Link le añade `?client_reference_id=<id_de_la_compra>`. El webhook `checkout.session.completed` recibe ese valor y marca `purchases/{id}` como `paid`. La app escucha sus compras y desbloquea el cosmético. No hace falta mapear Price IDs.
 
 ### 2.4 Stripe CLI (probar el webhook en local)
 - [ ] Instalar la CLI: <https://docs.stripe.com/stripe-cli> (Windows: `scoop install stripe` o binario).
 - [ ] `stripe login` (abre el navegador).
-- [ ] El día 5 haremos: `stripe listen --forward-to localhost:4400/functions/stripeWebhook` (o similar) → nos dará el **secreto de webhook** (`whsec_...`) → lo guardamos en la configuración de la función.
+- [ ] El día 5 haremos: `stripe listen --forward-to http://localhost:5001/tiltmaze-726ca/us-central1/stripeWebhook --events checkout.session.completed` → nos dará el **secreto de webhook** (`whsec_...`) → lo guardamos en la configuración de la función.
 
 ### 2.5 Tarjeta de prueba para la demo
 - Número: `4242 4242 4242 4242`
@@ -146,6 +146,6 @@ Cuando la app abra el Payment Link le añadirá `?client_reference_id=<uid>` (el
 | 2 | Crear proyecto Firebase + Firestore + Auth anónima | 4 |
 | 3 | Descargar `google-services.json` | 4 |
 | 4 | Decidir vía de Functions (emulador vs Blaze) | 5 |
-| 5 | Crear cuenta Stripe + 6 Payment Links MXN + apuntar URLs y Price IDs | 5 |
+| 5 | Crear cuenta Stripe + 5 Payment Links MXN + apuntar URLs | 5 |
 | 6 | Instalar Stripe CLI + `stripe login` | 5 |
 | 7 | (Nada más para push: se configura el día 6) | 6 |

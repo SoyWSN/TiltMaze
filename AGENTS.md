@@ -5,46 +5,52 @@ Juego de laberinto para móvil (**Expo SDK 57 / React Native 0.86 / TypeScript**
 ## Lee esto primero
 - [`README.md`](README.md) — qué es, estado actual, estructura y cómo extenderlo.
 - [`docs/SETUP.md`](docs/SETUP.md) — checklist manual de Firebase y Stripe.
+- [`docs/STRIPE.md`](docs/STRIPE.md) — runbook de Stripe (crear cuenta/links, webhook local con el emulador + Stripe CLI).
 - [`../PLAN.md`](../PLAN.md) — plan general por días (fuera de `TiltMaze/`).
 
 ## Objetivo y estado
 
 **Requisitos del proyecto:** sensores del teléfono, base de datos (Firebase), compras (Stripe), notificaciones push y biometría (huella).
 
-**Implementado:**
+**Implementado y probado en teléfono (dev build de EAS):**
 - Juego jugable con **5 niveles** (mapas ASCII), física propia, render con **Skia**.
 - Control por **acelerómetro** con calibración y sensibilidad (`src/game/sensors.ts` → `useTilt`).
 - **Pantalla de niveles** con desbloqueo progresivo y mejores tiempos (`src/app/levels.tsx`).
-- **Cosméticos** equipables (pelotas de color gratis + temas); premium bloqueado para Stripe (`src/data/cosmetics.ts`, `src/app/cosmetics.tsx`).
+- **Cosméticos** equipables: 7 pelotas de color gratis + **3 pelotas premium con imagen** (Fuego/Galaxia/Emoji) + temas de tablero, con premium bloqueado tras Stripe (`src/data/cosmetics.ts`, `src/app/cosmetics.tsx`).
 - Sistema de diseño pastel (fondo animado, tarjetas con degradado) en **todas** las pantallas.
-- Progreso y desbloqueo **cableados** (`completeLevel` en el store, al ganar).
+- **Firebase (día 4):** auth anónimo + Firestore, persistencia del progreso, onboarding, bloqueo con huella y Configuración/Perfil reales (`src/services/*`, `src/hooks/use-bootstrap.ts`).
+- **Stripe (día 5):** pago con Payment Link + webhook en Cloud Function (emulador local) que marca la compra `paid` y **desbloquea el cosmético en vivo**. Probado de extremo a extremo en modo test (`functions/index.js`, `docs/STRIPE.md`).
 
 **Pendiente:**
-- **Persistencia real** (Firestore): hoy el estado vive en memoria (`zustand`) y se pierde al cerrar.
-- **Firebase** (día 4): conectar `google-services.json`, Firestore (`users`, `purchases`), auth anónimo y **biometría** (`expo-local-authentication`) + pantallas de Configuración/Perfil reales.
-- **Stripe** (día 5): Payment Links en MXN + Cloud Function (webhook) que otorga el cosmético.
-- **Push FCM** (día 6) y pulido (día 7).
+- **Notificaciones push FCM** (día 6) y pulido/demo (día 7).
+- Extras opcionales: fuente redondeada, ranking, más niveles.
 
 ## Arquitectura
 
 ```
 src/
-  app/            rutas Expo Router: _layout, index, levels, game, cosmetics, sensors, settings, profile
-  components/     floating-background, gradient-card, balance-line, coming-soon, themed-*
+  app/            rutas Expo Router: _layout, index, levels, game, cosmetics, sensors, settings, profile, onboarding
+  assets/balls/   PNG de las pelotas premium (ball-fuego, ball-galaxia, ball-emoji)
+  components/     floating-background, gradient-card, balance-line, coming-soon, lock-gate, themed-*
   constants/      palette.ts (colores del mockup), theme.ts (tema base del template)
   data/
-    cosmetics.ts  catálogo (gratis + premium), precios MXN, helpers ballColorFor/boardThemeFor
+    cosmetics.ts  catálogo (gratis + premium + imágenes), precios MXN, helpers ballColorFor/ballImageFor/boardThemeFor
     levels/       types.ts (createLevel/getTile), level-1..5.ts, index.ts (registro LEVELS)
   game/
     sensors.ts    useTilt(): acelerómetro → inclinación calibrada
     engine.ts     stepBall(): gravedad, fricción, colisiones, hoyos, meta
+  hooks/
+    use-bootstrap.ts  arranque: auth → hidratar Firestore → activar persistencia → escuchar compras
+  services/       auth.ts, firestore.ts, biometric.ts, persistence.ts, purchases.ts
   store/player.ts estado global (zustand): perfil, récords, desbloqueo, cosméticos equipados
+functions/        webhook de Stripe (Cloud Function v2) — ver docs/STRIPE.md
 ```
 
 Puntos de entrada clave:
-- `usePlayer` (zustand) es la **fuente de verdad** del estado del jugador (aún sin persistir).
+- `usePlayer` (zustand) es la **fuente de verdad** del estado del jugador; se **persiste en Firestore** vía `src/services/persistence.ts` (lo hidrata `use-bootstrap`).
 - `LEVELS` / `getLevel` / `getNextLevel` (`src/data/levels/index.ts`) — registro de niveles.
 - `Palette` (`src/constants/palette.ts`) — todos los colores de la UI.
+- `COSMETICS` / `ballColorFor` / `ballImageFor` (`src/data/cosmetics.ts`) — catálogo y helpers de pintado.
 
 ## Convenciones y decisiones
 
@@ -53,7 +59,8 @@ Puntos de entrada clave:
 - **Física en unidades de casilla** (independiente de píxeles). Bola radio `0.2` casillas; hoyo `0.31`.
 - **Convención de inclinación** (`useTilt`): `x` negativo = izquierda; `y` positivo = abajo en pantalla. El motor aplica la gravedad en consecuencia. No invertir sin tocar ambos.
 - **Tema claro forzado** (`app.json` → `userInterfaceStyle: "light"`).
-- **Precios en MXN.** En modo real, Stripe exige mínimo **$10 MXN**; los precios de $5–$8 funcionan en modo test.
+- **Precios en MXN.** Pelotas $10 MXN y tableros $20 MXN (ya cumplen el mínimo real de $10 MXN de Stripe). No hay pack.
+- **Pelotas premium con imagen:** un cosmético `skin` puede traer `image` (PNG). En la UI se pinta con **`expo-image`** (`contentFit="cover"`, recortada a círculo por el contenedor); en el juego se pinta con **Skia** (`useImage` + `Group` con `clip`). Ver el gotcha de RN `Image`.
 - Catálogo de niveles y cosméticos son **datos estáticos** en la app (no Firestore). Firestore guarda perfil/progreso/compras.
 
 ## Gotchas (importante)
@@ -61,14 +68,20 @@ Puntos de entrada clave:
 - **Íconos:** importar siempre por subpath — `import Ionicons from '@expo/vector-icons/Ionicons'`. El barrel `import { Ionicons } from '@expo/vector-icons'` carga **todos** los sets y rompe el bundle (`Unable to resolve "./Zocial"`) además de inflar la app.
 - **Lint de React (React Compiler):** no llamar `setState` ni `Date.now()`/`Animated` impuros directamente en un efecto o en render; usa `useRef`, remount con `key`, o maneja estado por eventos. Reglas activas: `react-hooks/set-state-in-effect`, `react-hooks/purity`.
 - **`StyleSheet.absoluteFillObject` no existe** en RN 0.86 (tipos); usa `StyleSheet.absoluteFill` o `position:'absolute'` + `top/right/bottom/left: 0`.
+- **Imágenes raster en la UI: usa `expo-image`, NO el `Image` de `react-native`.** En RN 0.86 (New Architecture) el `Image` de react-native renderiza mal (react-native#48790): ignora el tamaño y dibuja la imagen a escala natural anclada arriba-izquierda (parece "en blanco"). `expo-image` (ya instalado) lo evita; dale `contentFit="cover"` y `width/height: '100%'`. En el juego se usa el `Image` de **Skia**, que no tiene ese problema.
+- **Reglas de Firestore: `request.resource.data.uid`** (no `request.data.uid`) para validar al dueño al **crear** un doc. `resource.data.uid` para leer. Ver `docs/SETUP.md`.
+- **Emulador de Functions:** arráncalo con `--project tiltmaze-726ca` (o ten `.firebaserc`), si no arranca como `demo-no-project` y todas las rutas responden **404**. Define además `FUNCTIONS_DISCOVERY_TIMEOUT=120` porque el primer arranque del worker puede tardar >30 s (Windows/antivirus). Detalles en `docs/STRIPE.md`.
+- **`firebase-functions` v6 solo exporta la API v2**: usa `require('firebase-functions/v2/https').onRequest` — `functions.https.onRequest` (v1) ya no existe y la función no carga.
 - **ScrollView en contenedor centrado:** darle `style={{ width: '100%' }}`; si no, se encoge al contenido y se corta a la derecha.
 - **Expo Go** sirve para Skia, sensores, degradados e íconos. **Firebase/FCM y FaceID en iOS** requieren **dev build** (`npx expo run:android` o EAS).
+- **`@react-native-firebase` v26 usa API modular** (estilo firebase-js-sdk v9+): importa funciones nombradas (`getAuth`, `signInAnonymously(auth)`, `signOut(auth)`, `onAuthStateChanged(auth, cb)`; `getFirestore`, `doc`, `getDoc`, `setDoc`) — **no** hay export default ni `FirebaseAuthTypes`. Además `DocumentSnapshot.exists()` y `.data()` son **métodos** (llámalos con paréntesis).
 - Los sensores **solo** se prueban en teléfono físico.
 
 ## Cómo extender
 
 - **Nuevo nivel:** crea `src/data/levels/level-N.ts` con `createLevel({ id, name, rows })` y regístralo en `src/data/levels/index.ts`. Reglas del mapa: rectangular, borde `#`, un solo `S` y `G`, y camino S→G **sin hoyos** (validable con BFS). Ver `README.md`.
 - **Nuevo cosmético:** edita `src/data/cosmetics.ts` (`priceMXN: 0` = gratis). Ver `README.md`.
+- **Imagen en una pelota:** suelta el PNG (256×256, fondo transparente) en `src/assets/balls/` y añade `image: require('../assets/balls/mi-pelota.png')` al cosmético en `src/data/cosmetics.ts`. Se recorta a círculo sola en UI y juego.
 
 ## Comandos
 

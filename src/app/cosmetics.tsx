@@ -1,7 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 
 import { FloatingBackground } from '@/components/floating-background';
 import { Palette } from '@/constants/palette';
@@ -13,11 +15,17 @@ import {
   priceLabel,
   type Cosmetic,
 } from '@/data/cosmetics';
+import { createPurchase } from '@/services/purchases';
 import { usePlayer } from '@/store/player';
 
 const SKINS = COSMETICS.filter((item) => item.type === 'skin');
 const THEMES = COSMETICS.filter((item) => item.type === 'theme');
-const PACKS = COSMETICS.filter((item) => item.type === 'pack');
+
+/** Añade el `client_reference_id` (id de la compra) al Payment Link. */
+function buildPaymentUrl(base: string, clientReferenceId: string): string {
+  const separator = base.includes('?') ? '&' : '?';
+  return `${base}${separator}client_reference_id=${encodeURIComponent(clientReferenceId)}`;
+}
 
 function BallSwatch({
   cosmetic,
@@ -36,8 +44,16 @@ function BallSwatch({
       onPress={onPress}
       style={({ pressed }) => [styles.swatch, pressed && styles.pressed]}>
       <View style={[styles.swatchRing, equipped && styles.swatchRingActive]}>
-        <View style={[styles.swatchBall, { backgroundColor: cosmetic.previewColor }]}>
-          <View style={styles.ballShine} />
+        <View
+          style={[
+            styles.swatchBall,
+            { backgroundColor: cosmetic.image ? 'transparent' : cosmetic.previewColor },
+          ]}>
+          {cosmetic.image ? (
+            <Image source={cosmetic.image} style={styles.ballImage} contentFit="cover" />
+          ) : (
+            <View style={styles.ballShine} />
+          )}
         </View>
         {equipped && (
           <View style={styles.checkBadge}>
@@ -103,14 +119,37 @@ export default function CosmeticsScreen() {
   const ownedItems = usePlayer((state) => state.ownedItems);
   const equipped = usePlayer((state) => state.equipped);
   const equip = usePlayer((state) => state.equip);
+  const uid = usePlayer((state) => state.uid);
   const [notice, setNotice] = useState<string | null>(null);
 
   const equippedSkin = getCosmetic(equipped.skinId);
   const equippedTheme = getCosmetic(equipped.themeId);
 
+  const handleBuy = async (cosmetic: Cosmetic) => {
+    if (!cosmetic.paymentLinkUrl || cosmetic.paymentLinkUrl.includes('REPLACE_ME')) {
+      setNotice(`El pago de «${cosmetic.name}» aún no está configurado en Stripe.`);
+      return;
+    }
+    if (!uid) {
+      setNotice('Aún no hay sesión. Espera un momento e inténtalo de nuevo.');
+      return;
+    }
+    setNotice(`Abriendo el pago de «${cosmetic.name}» (${priceLabel(cosmetic)})…`);
+    try {
+      const purchaseId = await createPurchase(uid, cosmetic.id, cosmetic.priceMXN);
+      const url = buildPaymentUrl(cosmetic.paymentLinkUrl, purchaseId);
+      await WebBrowser.openBrowserAsync(url);
+      setNotice('Completa el pago en el navegador y el cosmético se desbloqueará solo.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('handleBuy error:', message);
+      setNotice(`No se pudo abrir el pago: ${message}`);
+    }
+  };
+
   const onSkinPress = (cosmetic: Cosmetic) => {
     if (!ownedItems.includes(cosmetic.id)) {
-      setNotice(`«${cosmetic.name}» se desbloqueará el día 5 con Stripe (${priceLabel(cosmetic)}).`);
+      void handleBuy(cosmetic);
       return;
     }
     setNotice(null);
@@ -119,7 +158,7 @@ export default function CosmeticsScreen() {
 
   const onThemePress = (cosmetic: Cosmetic) => {
     if (!ownedItems.includes(cosmetic.id)) {
-      setNotice(`«${cosmetic.name}» se desbloqueará el día 5 con Stripe (${priceLabel(cosmetic)}).`);
+      void handleBuy(cosmetic);
       return;
     }
     setNotice(null);
@@ -138,8 +177,19 @@ export default function CosmeticsScreen() {
 
           <View style={styles.previewCard}>
             <View
-              style={[styles.previewBall, { backgroundColor: ballColorFor(equipped.skinId) }]}>
-              <View style={styles.ballShine} />
+              style={[
+                styles.previewBall,
+                {
+                  backgroundColor: equippedSkin?.image
+                    ? 'transparent'
+                    : ballColorFor(equipped.skinId),
+                },
+              ]}>
+              {equippedSkin?.image ? (
+                <Image source={equippedSkin.image} style={styles.ballImage} contentFit="cover" />
+              ) : (
+                <View style={styles.ballShine} />
+              )}
             </View>
             <View style={styles.previewInfo}>
               <Text style={styles.previewLabel}>EN USO</Text>
@@ -179,25 +229,6 @@ export default function CosmeticsScreen() {
               />
             ))}
           </View>
-
-          {PACKS.map((pack) => (
-            <Pressable
-              key={pack.id}
-              accessibilityRole="button"
-              onPress={() =>
-                setNotice(`«${pack.name}» se desbloqueará el día 5 con Stripe (${priceLabel(pack)}).`)
-              }
-              style={({ pressed }) => [styles.packCard, pressed && styles.pressed]}>
-              <View style={styles.packIcon}>
-                <Ionicons name="gift" size={22} color={Palette.surface} />
-              </View>
-              <View style={styles.themeInfo}>
-                <Text style={styles.packName}>{pack.name}</Text>
-                <Text style={styles.themeMeta}>Todos los cosméticos premium</Text>
-              </View>
-              <Text style={styles.packPrice}>{priceLabel(pack)}</Text>
-            </Pressable>
-          ))}
 
           {notice && (
             <View style={styles.noticeBox}>
@@ -258,7 +289,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    padding: 10,
+    overflow: 'hidden',
     shadowColor: '#E0A21B',
     shadowOpacity: 0.35,
     shadowRadius: 10,
@@ -266,10 +297,17 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   ballShine: {
+    position: 'absolute',
+    top: 7,
+    left: 7,
     width: 12,
     height: 12,
     borderRadius: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.85)',
+  },
+  ballImage: {
+    width: '100%',
+    height: '100%',
   },
   previewInfo: {
     flex: 1,
@@ -346,7 +384,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    padding: 7,
+    overflow: 'hidden',
   },
   checkBadge: {
     position: 'absolute',

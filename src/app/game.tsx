@@ -1,4 +1,4 @@
-import { Canvas, Circle, Path, Rect } from '@shopify/react-native-skia';
+import { Canvas, Circle, Group, Image, Path, Rect, useImage } from '@shopify/react-native-skia';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -12,11 +12,12 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import type { ImageRequireSource } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FloatingBackground } from '@/components/floating-background';
 import { Palette } from '@/constants/palette';
-import { ballColorFor, boardThemeFor, DEFAULT_BOARD_THEME, type BoardTheme } from '@/data/cosmetics';
+import { ballColorFor, ballImageFor, boardThemeFor, DEFAULT_BOARD_THEME, type BoardTheme } from '@/data/cosmetics';
 import { getLevel, getNextLevel, type MazeLevel } from '@/data/levels';
 import { getStartPosition, stepBall, type BallPoint, type BallVelocity } from '@/game/engine';
 import { useTilt } from '@/game/sensors';
@@ -63,12 +64,14 @@ function MazeCanvas({
   cellSize,
   ball,
   ballColor,
+  ballImage,
   theme,
 }: {
   level: MazeLevel;
   cellSize: number;
   ball: BallPoint;
   ballColor: string;
+  ballImage?: ImageRequireSource;
   theme: BoardTheme;
 }) {
   const width = level.columns * cellSize;
@@ -78,6 +81,16 @@ function MazeCanvas({
   const start = useMemo(() => findTiles(level, 'S'), [level]);
   const goal = useMemo(() => findTiles(level, 'G'), [level]);
   const markerRadius = cellSize * 0.29;
+  const ballRadius = cellSize * 0.22;
+  const ballCx = ball.x * cellSize;
+  const ballCy = ball.y * cellSize;
+  const ballSkImage = useImage(ballImage);
+  const ballClipPath = useMemo(() => {
+    const r = cellSize * 0.22;
+    const cx = ball.x * cellSize;
+    const cy = ball.y * cellSize;
+    return `M ${cx - r} ${cy} a ${r} ${r} 0 1 0 ${r * 2} 0 a ${r} ${r} 0 1 0 ${-r * 2} 0`;
+  }, [ball.x, ball.y, cellSize]);
 
   return (
     <Canvas style={{ width, height }}>
@@ -128,12 +141,20 @@ function MazeCanvas({
           color={theme.wall}
         />
       ))}
-      <Circle
-        cx={ball.x * cellSize}
-        cy={ball.y * cellSize}
-        r={cellSize * 0.22}
-        color={ballColor}
-      />
+      {ballSkImage ? (
+        <Group clip={ballClipPath}>
+          <Image
+            image={ballSkImage}
+            x={ballCx - ballRadius}
+            y={ballCy - ballRadius}
+            width={ballRadius * 2}
+            height={ballRadius * 2}
+            fit="cover"
+          />
+        </Group>
+      ) : (
+        <Circle cx={ballCx} cy={ballCy} r={ballRadius} color={ballColor} />
+      )}
       <Circle
         cx={ball.x * cellSize - cellSize * 0.065}
         cy={ball.y * cellSize - cellSize * 0.07}
@@ -354,6 +375,7 @@ function GameBoard({ level }: { level: MazeLevel }) {
               cellSize={cellSize}
               ball={ball}
               ballColor={ballColor}
+              ballImage={ballImageFor(equippedSkinId)}
               theme={boardTheme}
             />
             {status === 'won' && (

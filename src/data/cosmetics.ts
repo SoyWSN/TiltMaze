@@ -1,8 +1,11 @@
+import type { ImageRequireSource } from 'react-native';
+
 /**
  * Catálogo de cosméticos de TiltMaze (precios en pesos mexicanos).
  *
  * - `previewColor` es el color de la bola (para skins) o de la tarjeta.
  * - `boardTheme` son los colores del tablero (para temas).
+ * - `image` es el arte de la bola (skins premium con imagen en lugar de color plano).
  * - `paymentLinkUrl` se crea en el dashboard de Stripe y se pega aquí el día 5.
  *   El mínimo de cargo de Stripe en MXN en modo real es $10.00; los precios
  *   de $5–$8 MXN funcionan en modo test.
@@ -28,6 +31,8 @@ export type Cosmetic = {
   paymentLinkUrl: string | null;
   /** Color de la bola o de la vista previa. */
   previewColor: string;
+  /** Arte de la bola (skins premium con imagen en lugar de color plano). */
+  image?: ImageRequireSource;
   /** Solo para temas: colores del tablero. */
   boardTheme?: BoardTheme;
   /** Solo para el pack: ids de los cosméticos incluidos. */
@@ -61,25 +66,28 @@ export const COSMETICS: Cosmetic[] = [
     id: 'skin_fuego',
     name: 'Fuego',
     type: 'skin',
-    priceMXN: 5,
-    paymentLinkUrl: 'https://buy.stripe.com/test_REPLACE_ME',
+    priceMXN: 10,
+    paymentLinkUrl: 'https://buy.stripe.com/test_8x200k811dwp27U6s6bjW00',
     previewColor: '#FF5722',
+    image: require('../assets/balls/ball-fuego.png'),
   },
   {
     id: 'skin_galaxia',
     name: 'Galaxia',
     type: 'skin',
-    priceMXN: 5,
-    paymentLinkUrl: 'https://buy.stripe.com/test_REPLACE_ME',
+    priceMXN: 10,
+    paymentLinkUrl: 'https://buy.stripe.com/test_6oU28sdll63XeUG4jYbjW01',
     previewColor: '#7C4DFF',
+    image: require('../assets/balls/ball-galaxia.png'),
   },
   {
     id: 'skin_emoji',
     name: 'Emoji',
     type: 'skin',
-    priceMXN: 5,
-    paymentLinkUrl: 'https://buy.stripe.com/test_REPLACE_ME',
+    priceMXN: 10,
+    paymentLinkUrl: 'https://buy.stripe.com/test_8x2bJ29551NHdQCg2GbjW02',
     previewColor: '#FFC107',
+    image: require('../assets/balls/ball-emoji.png'),
   },
 
   // ── Tableros ──────────────────────────────────────────────────────
@@ -96,8 +104,8 @@ export const COSMETICS: Cosmetic[] = [
     id: 'theme_bamboo',
     name: 'Bamboo',
     type: 'theme',
-    priceMXN: 8,
-    paymentLinkUrl: 'https://buy.stripe.com/test_REPLACE_ME',
+    priceMXN: 20,
+    paymentLinkUrl: 'https://buy.stripe.com/test_bJeaEY9553VP8wi9EibjW04',
     previewColor: '#4CAF50',
     boardTheme: {
       board: '#CFE8C8',
@@ -112,8 +120,8 @@ export const COSMETICS: Cosmetic[] = [
     id: 'theme_neon',
     name: 'Neón',
     type: 'theme',
-    priceMXN: 8,
-    paymentLinkUrl: 'https://buy.stripe.com/test_REPLACE_ME',
+    priceMXN: 20,
+    paymentLinkUrl: 'https://buy.stripe.com/test_bJe14oa99gIB5k603IbjW03',
     previewColor: '#121212',
     boardTheme: {
       board: '#1B1B33',
@@ -125,16 +133,6 @@ export const COSMETICS: Cosmetic[] = [
     },
   },
 
-  // ── Pack ──────────────────────────────────────────────────────────
-  {
-    id: 'pack_todo',
-    name: 'Pack todo incluido',
-    type: 'pack',
-    priceMXN: 10,
-    paymentLinkUrl: 'https://buy.stripe.com/test_REPLACE_ME',
-    previewColor: '#3C87F7',
-    includes: ['skin_fuego', 'skin_galaxia', 'skin_emoji', 'theme_bamboo', 'theme_neon'],
-  },
 ];
 
 /** Cosméticos que todo jugador tiene desde el inicio (los gratis). */
@@ -148,6 +146,10 @@ export const getCosmetic = (id: string): Cosmetic | undefined =>
 /** Color de la bola según la skin equipada. */
 export const ballColorFor = (skinId: string): string =>
   getCosmetic(skinId)?.previewColor ?? '#F05D5E';
+
+/** Imagen de la bola según la skin equipada (si tiene arte). */
+export const ballImageFor = (skinId: string): ImageRequireSource | undefined =>
+  getCosmetic(skinId)?.image;
 
 /** Colores del tablero según el tema equipado. */
 export const boardThemeFor = (themeId: string): BoardTheme =>
